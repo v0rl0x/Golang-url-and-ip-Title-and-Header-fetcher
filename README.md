@@ -5,6 +5,10 @@ Golang url and ip Title and Header fetcher to automatically fetch header data an
 
 go build banner.go
 
+go mod init banner
+
+go mod tidy
+
 ## To use the program:
 
 ips.txt | ./banner -p portnumber -o outputfile -t threadcount -b headerdata/bannerdata -t titledata
