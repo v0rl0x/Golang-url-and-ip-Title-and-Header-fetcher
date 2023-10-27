@@ -11,8 +11,10 @@ go mod tidy
 
 ## To use the program:
 
-ips.txt | ./banner -p portnumber -o outputfile -t threadcount -b headerdata/bannerdata -t titledata
+ips.txt | ./banner -p portnumber -o outputfile -t threadcount -b "headerdata/bannerdata" -t "titledata"
 
 Script will automatically output header data/banner data and title data if command line arg isn't specified.
 
 Zmap can also be piped into the program.
+
+Threads is the number of concurrect connections, for example if you put 5000 threads it will scan 5000 ips/urls consecutively.
