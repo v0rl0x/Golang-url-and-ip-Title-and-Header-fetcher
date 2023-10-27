@@ -18,3 +18,11 @@ Script will automatically output header data/banner data and title data if comma
 Zmap can also be piped into the program.
 
 Threads is the number of concurrect connections, for example if you put 5000 threads it will scan 5000 ips/urls consecutively.
+
+## extract.go file information
+
+Extract.go file will automatically extract the IP:PORT off the resulting file from the fetched data. It will output to extract-output.txt can be modified in the code for your specific naming needs.
+
+go build extract.go
+
+./extract filename
