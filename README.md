@@ -19,6 +19,8 @@ Zmap can also be piped into the program.
 
 Threads is the number of concurrect connections, for example if you put 5000 threads it will scan 5000 ips/urls consecutively.
 
+NOTE: You do not need to input -b or -t field if you do not want too! You can use -b or -t alone.
+
 ## extract.go file information
 
 Extract.go file will automatically extract the IP:PORT off the resulting file from the fetched data. It will output to extract-output.txt can be modified in the code for your specific naming needs.
