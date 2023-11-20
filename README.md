@@ -11,7 +11,7 @@ go mod tidy
 
 ## To use the program:
 
-ips.txt | ./banner -p portnumber -o outputfile -t threadcount -b "headerdata/bannerdata" -t "titledata"
+ips.txt | ./banner -p portnumber -o outputfile -t threadcount -b "headerdata/bannerdata" -title "titledata"
 
 Script will automatically output header data/banner data and title data if command line arg isn't specified.
 
