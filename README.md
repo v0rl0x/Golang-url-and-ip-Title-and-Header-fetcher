@@ -11,7 +11,9 @@ go mod tidy
 
 ## To use the program:
 
-ips.txt | ./banner -p portnumber -o outputfile -t threadcount -b "headerdata/bannerdata" -title "titledata"
+ips.txt | ./banner -p portnumber -o outputfile -t threadcount -b "headerdata/bannerdata" -title "titledata" -url "urldata"
+
+NOTE: Url data will try to input a url such as http://1.1.1.1/db_backup/ for example -url "/db_backup/" to the IP or any other data. It is recommended to also put a title data in there or you will get false positives for example -title "Index of /db_backup" with the URL flag option.
 
 Script will automatically output header data/banner data and title data if command line arg isn't specified.
 
