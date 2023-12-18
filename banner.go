@@ -100,6 +100,7 @@ func main() {
         return
     }
     defer file.Close()
+
     writer := bufio.NewWriter(file)
     defer writer.Flush()
 
@@ -130,7 +131,8 @@ func main() {
 
                     if (matchBanner && matchTitle) || (bannerString == "" && titleString == "") {
                         outputString := fmt.Sprintf("%s:%s%s, %s\n%s\nTitle: %s\n\n", ip, port, urlPath, url, headers, title)
-                        fmt.Fprintf(writer, outputString)
+                        fmt.Fprint(writer, outputString)
+                        writer.Flush()
                     }
                 }
             }
