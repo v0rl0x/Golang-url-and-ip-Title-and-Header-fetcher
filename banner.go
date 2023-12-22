@@ -92,7 +92,7 @@ func main() {
     flag.Parse()
 
     var wg sync.WaitGroup
-    sem := make(chan bool, threads)
+    sem := make(chan struct{}, threads)
 
     file, err := os.Create(output)
     if err != nil {
@@ -107,8 +107,8 @@ func main() {
     scanner := bufio.NewScanner(os.Stdin)
     for scanner.Scan() {
         ip := scanner.Text()
-        sem <- true
         wg.Add(1)
+        sem <- struct{}{}
 
         go func(ip string) {
             defer func() {
@@ -137,6 +137,10 @@ func main() {
                 }
             }
         }(ip)
+    }
+
+    if err := scanner.Err(); err != nil {
+        fmt.Fprintln(os.Stderr, "Error reading from input:", err)
     }
 
     wg.Wait()
