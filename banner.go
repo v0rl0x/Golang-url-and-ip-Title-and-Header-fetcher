@@ -42,31 +42,38 @@ func init() {
 
 func getHeaders(ip string, port string, urlPath string) (*http.Response, string, string, string, error) {
     url := fmt.Sprintf("https://%s:%s%s", ip, port, urlPath)
-    resp, headers, title, err := fetchHeaders(url)
+    resp, headersBuilder, title, err := fetchHeaders(url)
     if err != nil || resp.StatusCode != http.StatusOK {
         url = fmt.Sprintf("http://%s:%s%s", ip, port, urlPath)
-        resp, headers, title, err = fetchHeaders(url)
+        resp, headersBuilder, title, err = fetchHeaders(url)
         if err != nil || resp.StatusCode != http.StatusOK {
             return nil, "", "", "", err
         }
     }
+    headers := headersBuilder.String()
     return resp, url, headers, title, nil
 }
 
-func fetchHeaders(url string) (*http.Response, string, string, error) {
+func fetchHeaders(url string) (*http.Response, *strings.Builder, string, error) {
     resp, err := client.Get(url)
     if err != nil {
-        return nil, "", "", err
+        return nil, nil, "", err
     }
     defer resp.Body.Close()
 
-    headers := resp.Proto + "\n"
+    headers := &strings.Builder{}
+    headers.WriteString(resp.Proto)
+    headers.WriteString("\n")
+
     for key, values := range resp.Header {
         for _, value := range values {
-            headers += key + ": " + value + "\n"
+            headers.WriteString(key)
+            headers.WriteString(": ")
+            headers.WriteString(value)
+            headers.WriteString("\n")
         }
     }
-    headers += "\n"
+    headers.WriteString("\n")
 
     var title string
     tokenizer := html.NewTokenizer(resp.Body)
