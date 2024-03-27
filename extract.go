@@ -31,7 +31,7 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, ", http://") {
+		if strings.Contains(line, ", http://") || strings.Contains(line, ", https://") {
 			ipPort := strings.Split(line, ",")[0]
 			outputFile.WriteString(ipPort + "\n")
 		}
