@@ -7,6 +7,7 @@ import (
     "fmt"
     "golang.org/x/net/html"
     "net/http"
+    "net/url"
     "os"
     "strings"
     "sync"
@@ -26,32 +27,42 @@ var (
 func init() {
     flag.StringVar(&bannerString, "b", "", "string to search for within headers")
     flag.StringVar(&titleString, "title", "", "string to search for within the title")
-    flag.StringVar(&urlPath, "url", "", "URL path to append to the IP")
-    flag.StringVar(&port, "p", "80", "port number")
+    flag.StringVar(&urlPath, "url", "", "URL path to append to the IP/URL")
+    flag.StringVar(&port, "p", "80", "port number (ignored if full URL is provided)")
     flag.StringVar(&output, "o", "output.txt", "output file")
     flag.IntVar(&threads, "t", 1, "number of threads")
 
     tr := &http.Transport{
-        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-        MaxIdleConns:        100,
-        IdleConnTimeout:     30 * time.Second,
-        DisableCompression:  true,
+        TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
+        MaxIdleConns:       100,
+        IdleConnTimeout:    30 * time.Second,
+        DisableCompression: true,
     }
     client = &http.Client{Transport: tr, Timeout: time.Second * 10}
 }
 
-func getHeaders(ip string, port string, urlPath string) (*http.Response, string, string, string, error) {
-    url := fmt.Sprintf("https://%s:%s%s", ip, port, urlPath)
-    resp, headersBuilder, title, err := fetchHeaders(url)
+func getHeaders(target string, port string, urlPath string) (*http.Response, string, string, string, error) {
+    var finalURL string
+
+    if isValidURL(target) {
+        finalURL = fmt.Sprintf("%s%s", strings.TrimRight(target, "/"), urlPath)
+    } else {
+        finalURL = fmt.Sprintf("https://%s:%s%s", target, port, urlPath)
+    }
+
+    resp, headersBuilder, title, err := fetchHeaders(finalURL)
     if err != nil || resp.StatusCode != http.StatusOK {
-        url = fmt.Sprintf("http://%s:%s%s", ip, port, urlPath)
-        resp, headersBuilder, title, err = fetchHeaders(url)
+        if isValidURL(target) {
+            return nil, "", "", "", err
+        }
+        finalURL = fmt.Sprintf("http://%s:%s%s", target, port, urlPath)
+        resp, headersBuilder, title, err = fetchHeaders(finalURL)
         if err != nil || resp.StatusCode != http.StatusOK {
             return nil, "", "", "", err
         }
     }
     headers := headersBuilder.String()
-    return resp, url, headers, title, nil
+    return resp, finalURL, headers, title, nil
 }
 
 func fetchHeaders(url string) (*http.Response, *strings.Builder, string, error) {
@@ -95,6 +106,11 @@ func fetchHeaders(url string) (*http.Response, *strings.Builder, string, error) 
     }
 }
 
+func isValidURL(str string) bool {
+    _, err := url.ParseRequestURI(str)
+    return err == nil
+}
+
 func main() {
     flag.Parse()
 
@@ -113,17 +129,17 @@ func main() {
 
     scanner := bufio.NewScanner(os.Stdin)
     for scanner.Scan() {
-        ip := scanner.Text()
+        target := scanner.Text()
         wg.Add(1)
         sem <- struct{}{}
 
-        go func(ip string) {
+        go func(target string) {
             defer func() {
                 <-sem
                 wg.Done()
             }()
 
-            resp, url, headers, title, err := getHeaders(ip, port, urlPath)
+            resp, url, headers, title, err := getHeaders(target, port, urlPath)
             if err != nil {
                 fmt.Fprintf(os.Stderr, "Error fetching headers: %v\n", err)
                 return
@@ -137,13 +153,13 @@ func main() {
                     matchTitle := titleString == "" || contains(title, titleString)
 
                     if (matchBanner && matchTitle) || (bannerString == "" && titleString == "") {
-                        outputString := fmt.Sprintf("%s:%s%s, %s\n%s\nTitle: %s\n\n", ip, port, urlPath, url, headers, title)
+                        outputString := fmt.Sprintf("%s, %s\n%s\nTitle: %s\n\n", target, url, headers, title)
                         fmt.Fprint(writer, outputString)
                         writer.Flush()
                     }
                 }
             }
-        }(ip)
+        }(target)
     }
 
     if err := scanner.Err(); err != nil {
