@@ -17,6 +17,8 @@ NOTE: Url data will try to input a url such as http://1.1.1.1/db_backup/ for exa
 
 Script will automatically output header data/banner data and title data if command line arg isn't specified.
 
+The -url flag can handle multiple urls, for example -url urls.txt, one URL per line such as /db/
+
 Zmap can also be piped into the program.
 
 Threads is the number of concurrect connections, for example if you put 5000 threads it will scan 5000 ips/urls consecutively.
