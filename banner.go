@@ -27,7 +27,7 @@ var (
 func init() {
     flag.StringVar(&bannerString, "b", "", "string to search for within headers")
     flag.StringVar(&titleString, "title", "", "string to search for within the title")
-    flag.StringVar(&urlPath, "url", "", "URL path to append to the IP/URL")
+    flag.StringVar(&urlPath, "url", "", "URL path to append or file containing URL paths")
     flag.StringVar(&port, "p", "80", "port number (ignored if full URL is provided)")
     flag.StringVar(&output, "o", "output.txt", "output file")
     flag.IntVar(&threads, "t", 1, "number of threads")
@@ -111,6 +111,32 @@ func isValidURL(str string) bool {
     return err == nil
 }
 
+func isFile(path string) bool {
+    info, err := os.Stat(path)
+    return err == nil && !info.IsDir()
+}
+
+func readURLPathsFromFile(filePath string) ([]string, error) {
+    var urls []string
+    file, err := os.Open(filePath)
+    if err != nil {
+        return nil, err
+    }
+    defer file.Close()
+
+    scanner := bufio.NewScanner(file)
+    for scanner.Scan() {
+        line := strings.TrimSpace(scanner.Text())
+        if line != "" {
+            urls = append(urls, line)
+        }
+    }
+    if err := scanner.Err(); err != nil {
+        return nil, err
+    }
+    return urls, nil
+}
+
 func main() {
     flag.Parse()
 
@@ -128,38 +154,52 @@ func main() {
     defer writer.Flush()
 
     scanner := bufio.NewScanner(os.Stdin)
+    var urlPaths []string
+
+    if isFile(urlPath) {
+        urlPaths, err = readURLPathsFromFile(urlPath)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Error reading URL paths from file: %v\n", err)
+            return
+        }
+    } else {
+        urlPaths = []string{urlPath}
+    }
+
     for scanner.Scan() {
         target := scanner.Text()
-        wg.Add(1)
-        sem <- struct{}{}
+        for _, urlSuffix := range urlPaths {
+            wg.Add(1)
+            sem <- struct{}{}
 
-        go func(target string) {
-            defer func() {
-                <-sem
-                wg.Done()
-            }()
+            go func(target, urlSuffix string) {
+                defer func() {
+                    <-sem
+                    wg.Done()
+                }()
 
-            resp, url, headers, title, err := getHeaders(target, port, urlPath)
-            if err != nil {
-                fmt.Fprintf(os.Stderr, "Error fetching headers: %v\n", err)
-                return
-            }
+                resp, url, headers, title, err := getHeaders(target, port, urlSuffix)
+                if err != nil {
+                    fmt.Fprintf(os.Stderr, "Error fetching headers: %v\n", err)
+                    return
+                }
 
-            if resp != nil && resp.StatusCode == http.StatusOK {
-                pageNotFound := contains(title, "Not Found") || contains(headers, "Not Found") || contains(title, "404") || contains(headers, "404")
+                if resp != nil && resp.StatusCode == http.StatusOK {
+                    pageNotFound := contains(title, "Not Found") || contains(headers, "Not Found") || contains(title, "404") || contains(headers, "404")
 
-                if !pageNotFound {
-                    matchBanner := bannerString == "" || contains(headers, bannerString)
-                    matchTitle := titleString == "" || contains(title, titleString)
+                    if !pageNotFound {
+                        matchBanner := bannerString == "" || contains(headers, bannerString)
+                        matchTitle := titleString == "" || contains(title, titleString)
 
-                    if (matchBanner && matchTitle) || (bannerString == "" && titleString == "") {
-                        outputString := fmt.Sprintf("%s, %s\n%s\nTitle: %s\n\n", target, url, headers, title)
-                        fmt.Fprint(writer, outputString)
-                        writer.Flush()
+                        if (matchBanner && matchTitle) || (bannerString == "" && titleString == "") {
+                            outputString := fmt.Sprintf("%s, %s\n%s\nTitle: %s\n\n", target, url, headers, title)
+                            fmt.Fprint(writer, outputString)
+                            writer.Flush()
+                        }
                     }
                 }
-            }
-        }(target)
+            }(target, urlSuffix)
+        }
     }
 
     if err := scanner.Err(); err != nil {
