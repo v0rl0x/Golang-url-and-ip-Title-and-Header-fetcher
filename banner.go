@@ -15,13 +15,15 @@ import (
 )
 
 var (
-    bannerString string
-    titleString  string
-    urlPath      string
-    port         string
-    output       string
-    threads      int
-    client       *http.Client
+    bannerString  string
+    titleString   string
+    urlPath       string
+    port          string
+    output        string
+    threads       int
+    headerKey     string
+    headerValue   string
+    client        *http.Client
 )
 
 func init() {
@@ -31,6 +33,8 @@ func init() {
     flag.StringVar(&port, "p", "80", "port number (ignored if full URL is provided)")
     flag.StringVar(&output, "o", "output.txt", "output file")
     flag.IntVar(&threads, "t", 1, "number of threads")
+    flag.StringVar(&headerKey, "hk", "", "header key to search for")
+    flag.StringVar(&headerValue, "hv", "", "header value to search for")
 
     tr := &http.Transport{
         TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
@@ -191,7 +195,13 @@ func main() {
                         matchBanner := bannerString == "" || contains(headers, bannerString)
                         matchTitle := titleString == "" || contains(title, titleString)
 
-                        if (matchBanner && matchTitle) || (bannerString == "" && titleString == "") {
+                        matchHeader := true
+                        if headerKey != "" && headerValue != "" {
+                            headerVal := resp.Header.Get(headerKey)
+                            matchHeader = strings.Contains(headerVal, headerValue)
+                        }
+
+                        if (matchBanner && matchTitle && matchHeader) || (bannerString == "" && titleString == "" && matchHeader) {
                             outputString := fmt.Sprintf("%s, %s\n%s\nTitle: %s\n\n", target, url, headers, title)
                             fmt.Fprint(writer, outputString)
                             writer.Flush()
