@@ -19,6 +19,8 @@ Script will automatically output header data/banner data and title data if comma
 
 The -url flag can handle multiple urls, for example -url urls.txt, one URL per line such as /db/
 
+Now supports header values and header types. -hk "Content-Type" -hv "application/json"
+
 Zmap can also be piped into the program.
 
 Threads is the number of concurrect connections, for example if you put 5000 threads it will scan 5000 ips/urls consecutively.
