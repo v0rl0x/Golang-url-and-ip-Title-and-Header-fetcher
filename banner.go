@@ -42,7 +42,23 @@ func init() {
         IdleConnTimeout:    30 * time.Second,
         DisableCompression: true,
     }
-    client = &http.Client{Transport: tr, Timeout: time.Second * 10}
+    client = &http.Client{Transport: tr, Timeout: time.Second * 30}
+}
+
+func getHeadersWithRetry(target string, port string, urlPath string, retries int) (*http.Response, string, string, string, error) {
+    var resp *http.Response
+    var finalURL, headers, title string
+    var err error
+
+    for i := 0; i < retries; i++ {
+        resp, finalURL, headers, title, err = getHeaders(target, port, urlPath)
+        if err == nil && resp.StatusCode == http.StatusOK {
+            return resp, finalURL, headers, title, nil
+        }
+        time.Sleep(time.Duration(i) * time.Second)
+    }
+
+    return nil, "", "", "", fmt.Errorf("failed after %d retries: %v", retries, err)
 }
 
 func getHeaders(target string, port string, urlPath string) (*http.Response, string, string, string, error) {
@@ -182,9 +198,9 @@ func main() {
                     wg.Done()
                 }()
 
-                resp, url, headers, title, err := getHeaders(target, port, urlSuffix)
+                resp, url, headers, title, err := getHeadersWithRetry(target, port, urlSuffix, 3)
                 if err != nil {
-                    fmt.Fprintf(os.Stderr, "Error fetching headers: %v\n", err)
+                    fmt.Fprintf(os.Stderr, "Error fetching headers for %s: %v\n", target, err)
                     return
                 }
 
