@@ -52,7 +52,7 @@ func getHeadersWithRetry(target string, port string, urlPath string, retries int
 
     for i := 0; i < retries; i++ {
         resp, finalURL, headers, title, err = getHeaders(target, port, urlPath)
-        if err == nil && resp.StatusCode == http.StatusOK {
+        if err == nil && resp != nil && resp.StatusCode == http.StatusOK {
             return resp, finalURL, headers, title, nil
         }
         time.Sleep(time.Duration(i) * time.Second)
@@ -71,16 +71,17 @@ func getHeaders(target string, port string, urlPath string) (*http.Response, str
     }
 
     resp, headersBuilder, title, err := fetchHeaders(finalURL)
-    if err != nil || resp.StatusCode != http.StatusOK {
+    if err != nil || resp == nil || resp.StatusCode != http.StatusOK {
         if isValidURL(target) {
             return nil, "", "", "", err
         }
         finalURL = fmt.Sprintf("http://%s:%s%s", target, port, urlPath)
         resp, headersBuilder, title, err = fetchHeaders(finalURL)
-        if err != nil || resp.StatusCode != http.StatusOK {
+        if err != nil || resp == nil || resp.StatusCode != http.StatusOK {
             return nil, "", "", "", err
         }
     }
+
     headers := headersBuilder.String()
     return resp, finalURL, headers, title, nil
 }
